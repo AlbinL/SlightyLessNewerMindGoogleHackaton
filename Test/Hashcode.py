@@ -27,7 +27,7 @@ def make_ride(input_string):
     ride['distance'] = distance
     return ride
 
-rides, env_params = load_input('/home/viktor/Downloads/b_should_be_easy.in')
+rides, env_params = load_input('/home/viktor/Downloads/e_high_bonus.in')
 
 def evalFleet(chromosome, rides, env_params):
 
@@ -90,7 +90,7 @@ def evalFleet(chromosome, rides, env_params):
         return (fitness,)
 
 def initialGeneValue(max_gene_value):
-    if random.uniform(0, 1) < 0.5:
+    if random.uniform(0, 1) < 0.05:
         return random.randint(0, max_gene_value)
     else:
         return 0
@@ -115,14 +115,14 @@ def main():
 
     # create an initial population of 300 individuals (where
     # each individual is a list of integers)
-    pop = toolbox.population(n=300)
+    pop = toolbox.population(n=100)
     CXPB, MUTPB = 0.5, 0.2
-    number_of_generations = 1000
+    number_of_generations = 100
 
     # Evaluate the entire population
     fitnesses = list(map(toolbox.evaluate, pop))
 
-    pop = toolbox.population(n=300)
+    pop = toolbox.population(n=100)
     hof = tools.HallOfFame(1)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register("avg", numpy.mean)
@@ -150,20 +150,23 @@ def printBestIndividualGoogleStyle(bestIndividual, rides):
         except:
             info[vehicle] = [index]
 
-    for key, item in info.iteritems():
-        latest_arrival_times = []
-        ride_indices = item
-        for i in range(len(ride_indices)):
-            i_ride = ride_indices[i]
-            ride_dict = rides[i_ride]
-            latest_arrival_times.append(ride_dict['timeframe'][1])
+    with open("./best_solution", 'w') as f:
+        for key, item in info.iteritems():
+            latest_arrival_times = []
+            ride_indices = item
+            for i in range(len(ride_indices)):
+                i_ride = ride_indices[i]
+                ride_dict = rides[i_ride]
+                latest_arrival_times.append(ride_dict['timeframe'][1])
 
-        ride_indices = [x for _, x in sorted(zip(latest_arrival_times, ride_indices))]
+            ride_indices = [x for _, x in sorted(zip(latest_arrival_times, ride_indices))]
 
-        outlist = [len(ride_indices)]
-        outlist.extend(ride_indices)
-        outlist = [str(x) for x in outlist]
-        print(' '.join(outlist))
+            outlist = [len(ride_indices)]
+            outlist.extend(ride_indices)
+            outlist = [str(x) for x in outlist]
+            print(' '.join(outlist))
+            f.write(' '.join(outlist))
+            f.write("\n")
 
 
 if __name__ == "__main__":
