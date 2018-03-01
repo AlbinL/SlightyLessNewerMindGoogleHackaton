@@ -37,8 +37,7 @@ def evalFleet(chromosome, rides, env_params):
     bonus = env_params['B']
     nr_vehicles = env_params['F']
 
-
-    for i_vehicle in range(nr_vehicles):
+    for i_vehicle in range(1, nr_vehicles):
 
         earliest_leave_previous_ride_time = 0
         current_row = 0
@@ -90,17 +89,23 @@ def evalFleet(chromosome, rides, env_params):
     else:
         return (fitness,)
 
+def initialGeneValue(max_gene_value):
+    if random.uniform(0, 1) < 0.5:
+        return random.randint(0, max_gene_value)
+    else:
+        return 0
+
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMax)
 
 toolbox = base.Toolbox()
-toolbox.register("attr_bool", random.randint, 1, env_params['F'])
+toolbox.register("attr_bool", initialGeneValue, env_params['F'] + 1)
 toolbox.register("individual", tools.initRepeat, creator.Individual,
                  toolbox.attr_bool, env_params['N'])
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("evaluate", evalFleet, rides=rides, env_params=env_params)
 toolbox.register("mate", tools.cxOnePoint)
-toolbox.register("mutate", tools.mutUniformInt, low=1, up=env_params['F'], indpb=0.05)
+toolbox.register("mutate", tools.mutUniformInt, low=0, up=env_params['F'] + 1, indpb=1.0 / env_params['N'])
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 
