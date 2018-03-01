@@ -31,6 +31,27 @@ NBR_ITEMS = 20
 # dict initialization. It is also seeded in main().
 random.seed(64)
 
+# Load data
+def load_input(path):
+    with open(path, 'r') as f:
+        first_line = f.readline()
+        (R, C, F, N, B, T) = first_line.split(' ' )
+        env_params = {'R': int(R), 'C': int(C), 'F': int(F), 'N': int(N),
+                      'B': int(B), 'T': T}
+        rides = [None for x in range(int(N))]
+        for i, row in enumerate(f):
+            rides[i] = make_ride(row.strip('\n'))
+    return rides, env_params
+
+def make_ride(input_string):
+    input_list = input_string.split(' ')
+    ride = {'start': (int(input_list[0]), int(input_list[1])),
+            'stop': (int(input_list[2]), int(input_list[3])),
+            'timeframe': (int(input_list[4]), int(input_list[5]))}
+    distance = abs(ride['start'][0]-ride['stop'][0]) + abs(ride['start'][1]-ride['stop'][1])
+    ride['distance'] = distance
+    return ride
+
 # Create the item dictionary: item name is an integer, and value is 
 # a (weight, value) 2-uple.
 items = {}
@@ -51,15 +72,47 @@ toolbox.register("individual", tools.initRepeat, creator.Individual,
     toolbox.attr_item, IND_INIT_SIZE)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-def evalKnapsack(individual):
-    weight = 0.0
-    value = 0.0
-    for item in individual:
-        weight += items[item][0]
-        value += items[item][1]
-    if len(individual) > MAX_ITEM or weight > MAX_WEIGHT:
-        return 10000, 0             # Ensure overweighted bags are dominated
-    return weight, value
+def evalFleet(chromosome, rides):
+
+    nr_successful = 0
+    nr_unsuccessful = 0
+
+    for i_vehicle, vehicle in enumerate(chromosome):
+
+        next_available_departure = 0
+
+        ride_indices = [i for i, x in enumerate(chromosome) if x == vehicle]
+
+        # Get latest arrival times for all rides travelling with current vehicle
+        latest_arrival_times = []
+        for i in range(len(ride_indices)):
+            i_ride = ride_indices[i]
+            ride_dict = rides[i_ride]
+            latest_arrival_times.append(ride_dict['timeframe'][1])
+
+        ride_indices = [x for _, x in sorted(zip(ride_indices, latest_arrival_times))]
+
+        for i_ride, ride in enumerate(ride_indices):
+
+            ride_dict = rides[i_ride]
+
+            earliest_departure = ride_dict['timeframe'][0]
+            latest_arrival = ride_dict['timeframe'][1]
+            distance = ride_dict['distance']
+            duration = distance
+
+            actual_departure = max(earliest_departure, next_available_departure + duration)
+            next_available_departure = actual_departure + duration
+
+            if actual_departure <= latest_arrival:
+                nr_successful += 1
+            else:
+                nr_unsuccessful += 1
+
+    if nr_unsuccessful > 0:
+        return -nr_unsuccessful
+    else:
+        return nr_successful
 
 def cxSet(ind1, ind2):
     """Apply a crossover operation on input sets. The first child is the
@@ -80,12 +133,14 @@ def mutSet(individual):
         individual.add(random.randrange(NBR_ITEMS))
     return individual,
 
-toolbox.register("evaluate", evalKnapsack)
+toolbox.register("evaluate", evalFleet)
 toolbox.register("mate", cxSet)
 toolbox.register("mutate", mutSet)
 toolbox.register("select", tools.selNSGA2)
 
 def main():
+    rides, env = load_input("/home/viktor/Downloads/a_example.in")
+
     random.seed(64)
     NGEN = 50
     MU = 50
