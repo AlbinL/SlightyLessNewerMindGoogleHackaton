@@ -72,16 +72,23 @@ toolbox.register("individual", tools.initRepeat, creator.Individual,
     toolbox.attr_item, IND_INIT_SIZE)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-def evalFleet(chromosome, rides):
+def evalFleet(chromosome, rides, env_params):
 
-    nr_successful = 0
-    nr_unsuccessful = 0
+    fitness = 0
+    violation = 0
 
-    for i_vehicle, vehicle in enumerate(chromosome):
+    bonus = env_params['B']
+    nr_vehicles = env_params['F']
 
-        next_available_departure = 0
 
-        ride_indices = [i for i, x in enumerate(chromosome) if x == vehicle]
+    for i_vehicle in range(nr_vehicles):
+
+        earliest_leave_previous_ride_time = 0
+        current_row = 0
+        current_col = 0
+
+        # Get all rides travelling with current vehicle
+        ride_indices = [i for i, x in enumerate(chromosome) if x == i_vehicle]
 
         # Get latest arrival times for all rides travelling with current vehicle
         latest_arrival_times = []
@@ -90,29 +97,41 @@ def evalFleet(chromosome, rides):
             ride_dict = rides[i_ride]
             latest_arrival_times.append(ride_dict['timeframe'][1])
 
-        ride_indices = [x for _, x in sorted(zip(ride_indices, latest_arrival_times))]
+        ride_indices = [x for _, x in sorted(zip(latest_arrival_times, ride_indices))]
 
-        for i_ride, ride in enumerate(ride_indices):
+        for i_ride in ride_indices:
 
             ride_dict = rides[i_ride]
 
             earliest_departure = ride_dict['timeframe'][0]
             latest_arrival = ride_dict['timeframe'][1]
-            distance = ride_dict['distance']
-            duration = distance
+            current_ride_distance = ride_dict['distance']
+            current_ride_start_row = ride_dict['start'][0]
+            current_ride_start_col = ride_dict['start'][1]
+            current_ride_stop_row = ride_dict['stop'][0]
+            current_ride_stop_col= ride_dict['stop'][1]
 
-            actual_departure = max(earliest_departure, next_available_departure + duration)
-            next_available_departure = actual_departure + duration
+            current_ride_duration = current_ride_distance
+
+            travel_to_ride_duration = abs(current_ride_start_col - current_col) + abs(current_ride_start_row - current_row)
+
+            actual_departure = max(earliest_departure, earliest_leave_previous_ride_time + current_ride_duration + travel_to_ride_duration)
+
+            earliest_leave_previous_ride_time = actual_departure + current_ride_duration + travel_to_ride_duration
+            current_row = current_ride_stop_row
+            current_col = current_ride_stop_col
 
             if actual_departure <= latest_arrival:
-                nr_successful += 1
+                fitness += current_ride_distance
+                if actual_departure == earliest_departure:
+                    fitness += bonus
             else:
-                nr_unsuccessful += 1
+                violation -= 1
 
-    if nr_unsuccessful > 0:
-        return -nr_unsuccessful
+    if violation < 0:
+        return violation
     else:
-        return nr_successful
+        return fitness
 
 def cxSet(ind1, ind2):
     """Apply a crossover operation on input sets. The first child is the
@@ -139,7 +158,7 @@ toolbox.register("mutate", mutSet)
 toolbox.register("select", tools.selNSGA2)
 
 def main():
-    rides, env = load_input("/home/viktor/Downloads/a_example.in")
+    rides, env_params = load_input("/home/viktor/Downloads/a_example.in")
 
     random.seed(64)
     NGEN = 50
