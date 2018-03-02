@@ -10,10 +10,11 @@ def load_input(path):
         first_line = f.readline()
         (R, C, F, N, B, T) = first_line.split(' ' )
         env_params = {'R': int(R), 'C': int(C), 'F': int(F), 'N': int(N),
-                      'B': int(B), 'T': T}
+                      'B': int(B), 'T': int(T)}
         rides = [None for x in range(int(N))]
         for i, row in enumerate(f):
             rides[i] = make_ride(row.strip('\n'))
+            rides[i]['ID'] = i
     return rides, env_params
 
 def make_ride(input_string):
